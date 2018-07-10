@@ -85,6 +85,8 @@ SOCIAL_AUTH_STORAGE = 'social_django.models.DjangoStorage'
 SOCIAL_AUTH_EMAIL_FORM_URL = '/ledger/'
 SOCIAL_AUTH_EMAIL_VALIDATION_FUNCTION = 'ledger.accounts.mail.send_validation'
 SOCIAL_AUTH_EMAIL_VALIDATION_URL = '/ledger/validation-sent/'
+SOCIAL_AUTH_EMAIL_VALIDATION_ALLOW_REUSE = True
+SOCIAL_AUTH_EMAIL_VALIDATION_EXPIRED_THRESHOLD = env('EMAIL_VALIDATION_EXPIRY', 86400)
 SOCIAL_AUTH_PASSWORDLESS = True
 SOCIAL_AUTH_SESSION_EXPIRATION = env('SESSION_EXPIRATION', False)
 SOCIAL_AUTH_MAX_SESSION_LENGTH = env('MAX_SESSION_LENGTH', 1209600)     # two weeks
@@ -99,13 +101,12 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.auth_allowed',
     'social_core.pipeline.social_auth.social_user',
     'social_core.pipeline.user.get_username',
-    # 'social.pipeline.mail.mail_validation',
     'ledger.accounts.pipeline.mail_validation',
     'ledger.accounts.pipeline.user_by_email',
     'social_core.pipeline.user.create_user',
+    'ledger.accounts.pipeline.user_is_new_session',
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
-    #'social_core.pipeline.user.user_details'
 )
 
 SESSION_COOKIE_DOMAIN = env('SESSION_COOKIE_DOMAIN', None)
@@ -119,7 +120,6 @@ EMAIL_HOST = env('EMAIL_HOST', 'email.host')
 EMAIL_PORT = env('EMAIL_PORT', 25)
 EMAIL_FROM = env('EMAIL_FROM', ADMINS[0])
 DEFAULT_FROM_EMAIL = EMAIL_FROM
-
 
 TEMPLATES = [
     {
@@ -207,6 +207,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(os.path.join(BASE_DIR, 'ledger', 'static')),
     os.path.join(os.path.join(BASE_DIR, 'wildlifelicensing', 'static')),
+    os.path.join(os.path.join(BASE_DIR, 'wildlifecompliance', 'static')),
 ]
 if not os.path.exists(os.path.join(BASE_DIR, 'media')):
     os.mkdir(os.path.join(BASE_DIR, 'media'))
@@ -257,6 +258,10 @@ LOGGING = {
             'handlers': ['file'],
             'level': 'INFO'
         },
+        'wildlifecompliance': {
+            'handlers': ['file'],
+            'level': 'INFO'
+        },
 #        'oscar.checkout': {
 #            'handlers': ['file'],
 #            'level': 'INFO'
@@ -273,10 +278,13 @@ DDF_FILL_NULLABLE_FIELDS = False
 
 # Ledger settings
 CMS_URL=env('CMS_URL',None)
+VALID_SYSTEMS=env('VALID_SYSTEMS', '')
+VALID_SYSTEMS=VALID_SYSTEMS.split(',') if VALID_SYSTEMS else []
 LEDGER_USER=env('LEDGER_USER',None)
 LEDGER_PASS=env('LEDGER_PASS')
 NOTIFICATION_EMAIL=env('NOTIFICATION_EMAIL')
 BPAY_GATEWAY = env('BPAY_GATEWAY', None)
+INVOICE_UNPAID_WARNING = env('INVOICE_UNPAID_WARNING', '')
 # GST Settings
 LEDGER_GST = env('LEDGER_GST',10)
 # BPAY settings
@@ -292,7 +300,8 @@ BPOINT_TEST=env('BPOINT_TEST',True)
 # Custom Email Settings
 EMAIL_BACKEND = 'ledger.ledger_email.LedgerEmailBackend'
 PRODUCTION_EMAIL = env('PRODUCTION_EMAIL', False)
-#print PRODUCTION_EMAIL
+# Intercept and forward email recipient for non-production instances
+# Send to list of NON_PROD_EMAIL users instead
 EMAIL_INSTANCE = env('EMAIL_INSTANCE','PROD')
 NON_PROD_EMAIL = env('NON_PROD_EMAIL')
 if not PRODUCTION_EMAIL:

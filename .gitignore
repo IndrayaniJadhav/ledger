@@ -2,6 +2,7 @@
 .env
 venv/
 venv2/
+node_modules/
 cronjobs
 
 # Byte-compiled / optimized / DLL files
@@ -57,6 +58,7 @@ coverage.xml
 # Django stuff:
 *.log
 staticfiles/
+staticfiles*
 
 # vim
 *.swp
@@ -87,3 +89,12 @@ media/
 #parkstay import ignores
 import/
 importo.py
+
+#local uwsgi.ini files
+uwsgi*.ini
+*.djcache
+
+uwsgi.ini
+
+# npm locks
+*-lock.json
